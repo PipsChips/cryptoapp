@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import { Chart } from 'react-google-charts';
 import PropTypes from 'prop-types';
 import './App.css';
 // import { CandleStickChart  } from 'react-d3';
@@ -17,10 +18,20 @@ class App extends Component {
       startDate: "",
       endDate: "",
       closingPrices: [],
+      openingPrices: [],
+      highPrices: [],
+      lowPrices: [],
       smaRange: 2,
       smaPrices: [],
       dates: [],
-      points: []
+      points: [],
+      candlestickData: [],
+      smaLineData: [
+        ['DAY', 'val1'],
+        ['2017-12-17', 12500],
+        ['2017-12-19', 14500],
+        ['2017-12-21', 12500]
+      ]
     };
 
     this.symbolChange = this.symbolChange.bind(this);
@@ -64,24 +75,46 @@ class App extends Component {
     console.log(endPointUrl);
 
     fetch(endPointUrl).then(res => res.json())
-    .then(json => {
-      this.setState({closingPrices: json.Data.map(day => day.close)});
-      this.setState( {dates: json.Data.map(day => moment.unix(day.time).format("YYYY/MM/DD"))});
-    })
-    .then(() => {
-      var newPoints = [];
-      for(var i = 0; i < this.state.closingPrices.length; i++) {
-        newPoints.push({x: this.state.dates[i], y: this.state.closingPrices[i]});
-      }
-      this.setState({points: newPoints});
-      this.setState({smaPrices: sma(this.state.closingPrices, this.state.smaRange)});
-    })
-    .then(() => {
-      console.log("CLOSINGPRICES", this.state.closingPrices);
-      console.log("SMAPRICES", this.state.smaPrices);
-      console.log("DATES",this.state.dates);
-      console.log("POINTS: ", this.state.points);
-    });
+      .then(json => {
+        this.setState({closingPrices: json.Data.map(day => day.close)});
+        this.setState({openingPrices: json.Data.map(day => day.open)});
+        this.setState({highPrices: json.Data.map(day => day.high)});
+        this.setState({lowPrices: json.Data.map(day => day.low)});
+        
+        this.setState( {dates: json.Data.map(day => moment.unix(day.time).format("YYYY/MM/DD"))});
+      })
+      .then(() => {
+        var newPoints = [];
+        for(var i = 0; i < this.state.closingPrices.length; i++) {
+          newPoints.push({x: this.state.dates[i], y: this.state.closingPrices[i]});
+        }
+        this.setState({points: newPoints});
+        this.setState({smaPrices: sma(this.state.closingPrices, this.state.smaRange, (n) => n.toFixed(2))});
+      })
+      .then(() => {
+        
+
+        var newData = [["DAY","val1","val2","val3","val4"]];
+        for (var i = 0; i < this.state.dates.length; i++) {
+          if(this.state.closingPrices[i] > this.state.openingPrices[i]) {
+            newData.push([this.state.dates[i], this.state.lowPrices[i], this.state.openingPrices[i], this.state.closingPrices[i], this.state.highPrices[i]]);
+          }
+          else {
+            newData.push([this.state.dates[i], this.state.highPrices[i], this.state.openingPrices[i], this.state.closingPrices[i], this.state.lowPrices[i]]);
+          }
+        }
+        this.setState({candlestickData: newData});
+      })
+      .then(() => {
+        console.log("CLOSING PRICES", this.state.closingPrices);
+        console.log("OPENING PRICES", this.state.openingPrices);
+        console.log("LOW PRICES", this.state.lowPrices);
+        console.log("HIGH PRICES", this.state.highPrices);
+        console.log("SMA PRICES", this.state.smaPrices);
+        console.log("DATES",this.state.dates);
+        console.log("POINTS: ", this.state.points);
+        console.log("CANDLESTICK DATA: ", this.state.candlestickData);
+      });
   }
 
   dateChanged(date, e) {
@@ -99,6 +132,47 @@ class App extends Component {
   }
 
   render() {
+    var props1 = {
+      chartType:"CandlestickChart",
+      data: this.state.candlestickData,
+      width:"100%",
+      options:{
+        title:"Candlestick Chart",
+        legend:"none"
+      }
+    };
+
+    var props2 = {
+      chartType:"LineChart",
+      data: this.state.smaLineData,
+      width:"100%",
+      options:{
+        title:"Candlestick Chart",
+        legend:"none"
+      }
+    };
+
+    var comboProps = {
+      chartType:"ComboChart",
+      data: [
+        ['Date', 'Low', 'Open', 'Close', 'High', 'SMA'],
+        ['2014/05',   200,   324,    500,    456,     350],
+        ['2014/06',   322,   123,    543,    234,     320],
+        ['2014/07',   432,   455,    467,    568,     415],
+      ],
+      width:"100%",
+      options:{
+        title:"Combo Chart",
+        seriesType: "candlesticks",
+        series: {
+          1: {
+            type: "line"
+          }
+        },
+        legend:"none"
+      }
+    };
+
     return (
       <div className="App">
         <form onSubmit={this.calculate}>
@@ -119,12 +193,14 @@ class App extends Component {
         </form>
         {(this.state.closingPrices.length > 0) && <h3>Closing Prices:</h3>}
         <ol>
-          {this.state.closingPrices.map(price => <li key={price.toFixed(4)}>{price.toFixed(4)}</li>)}
+          {this.state.closingPrices.map(price => <li key={price.toFixed(2)}>{price.toFixed(2)}</li>)}
         </ol>
         {(this.state.smaPrices.length > 0) && <h3>SMA({this.state.smaRange}):</h3>}
         <ol start={this.state.smaRange}>
-          {this.state.smaPrices.map(sma => <li key={parseFloat(sma).toFixed(4)}>{parseFloat(sma).toFixed(4)}</li>)}
-        </ol>
+          {this.state.smaPrices.map(sma => <li key={parseFloat(sma).toFixed(2)}>{parseFloat(sma).toFixed(2)}</li>)}
+        </ol>        
+        {/* {(this.state.candlestickData.length > 0) && <Chart  {...props2} {...props1}/>} */}
+        <Chart  {...comboProps} />
       </div>
     );
   }
