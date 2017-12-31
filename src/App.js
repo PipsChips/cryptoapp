@@ -1,5 +1,7 @@
 import React, { Component } from 'react';
+import PropTypes from 'prop-types';
 import './App.css';
+import { CandleStickChart  } from 'react-d3';
 import moment from 'moment';
 import {ma} from 'moving-averages';
 var sma = require('sma');
@@ -15,16 +17,19 @@ class App extends Component {
       startDate: "",
       endDate: "",
       closingPrices: [],
-      smaRange: null,
-      smaPrices: []
+      smaRange: 2,
+      smaPrices: [],
+      dates: [],
+      points: []
     };
 
-    this.log = this.log.bind(this);
     this.symbolChange = this.symbolChange.bind(this);
     this.calculate = this.calculate.bind(this);
     this.dateChanged = this.dateChanged.bind(this);
     this.smaRangeChanged = this.smaRangeChanged.bind(this);
-    
+  }
+
+  componentWillMount(){
     fetch('https://min-api.cryptocompare.com/data/all/coinlist')
     .then(response => response.json())
     .then(json => {
@@ -42,12 +47,6 @@ class App extends Component {
     });
   }
 
-
-  log() {
-    console.log(this);
-    console.log("date selected");
-  }
-
   symbolChange(e) {
     this.setState({selectedSymbol: e.target.value});
     console.log("symbol changed to " + e.target.value);
@@ -60,20 +59,28 @@ class App extends Component {
     var startDate = moment(this.state.startDate,'YYYY/MM/DD');
     var endDate = moment(this.state.endDate,'YYYY/MM/DD');
     var diffDays = endDate.diff(startDate, 'days');
-    var timestamp = parseInt(moment(endDate).format("X"));
-    var endPointUrl = `https://min-api.cryptocompare.com/data/histoday?fsym=${symbol}&tsym=EUR&limit=${diffDays}&aggregate=1&toTs=${timestamp}`;
+    var timestamp = parseInt(moment(endDate).format("X")) + 86400;
+    var endPointUrl = `https://min-api.cryptocompare.com/data/histoday?fsym=${symbol}&tsym=EUR&limit=${diffDays - 1}&aggregate=1&toTs=${timestamp}`;
     console.log(endPointUrl);
 
     fetch(endPointUrl).then(res => res.json())
     .then(json => {
       this.setState({closingPrices: json.Data.map(day => day.close)});
+      this.setState( {dates: json.Data.map(day => moment.unix(day.time).format("YYYY/MM/DD"))});
     })
     .then(() => {
+      var newPoints = [];
+      for(var i = 0; i < this.state.closingPrices.length; i++) {
+        newPoints.push({x: this.state.dates[i], y: this.state.closingPrices[i]});
+      }
+      this.setState({points: newPoints});
       this.setState({smaPrices: ma(this.state.closingPrices, this.state.smaRange)});
     })
     .then(() => {
-      console.log(this.state.closingPrices);
-      console.log(this.state.smaPrices);
+      console.log("CLOSINGPRICES", this.state.closingPrices);
+      console.log("SMAPRICES", this.state.smaPrices);
+      console.log("DATES",this.state.dates);
+      console.log("POINTS: ", this.state.points);
     });
   }
 
@@ -101,9 +108,9 @@ class App extends Component {
             }
           </select>
           <br />
-          <input type="date" onChange={this.log} onChange={this.dateChanged.bind(this, 'startDate')} />
+          <input type="date" onChange={this.dateChanged.bind(this, 'startDate')} />
           <br />
-          <input type="date" onChange={this.log} onChange={this.dateChanged.bind(this, 'endDate')} />
+          <input type="date" onChange={this.dateChanged.bind(this, 'endDate')} />
           <br />
           <label htmlFor="smaRange">SMA(<i>Range</i>)</label>
           <input id="smaRange" type="number" value={this.state.smaRange} min="1" onChange={this.smaRangeChanged} />
@@ -112,11 +119,11 @@ class App extends Component {
         </form>
         {(this.state.closingPrices.length > 0) && <h3>Closing Prices:</h3>}
         <ol>
-          {this.state.closingPrices.map(price => <li key={price}>{price}</li>)}
+          {this.state.closingPrices.map(price => <li key={price.toFixed(4)}>{price.toFixed(4)}</li>)}
         </ol>
         {(this.state.smaPrices.length > 0) && <h3>SMA({this.state.smaRange}):</h3>}
         <ol start={this.state.smaRange}>
-          {this.state.smaPrices.map(sma => <li key={sma.toFixed(2)}>{sma.toFixed(2)}</li>)}
+          {this.state.smaPrices.map(sma => <li key={sma.toFixed(4)}>{sma.toFixed(4)}</li>)}
         </ol>
       </div>
     );
