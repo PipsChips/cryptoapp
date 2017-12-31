@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import './App.css';
-import { CandleStickChart  } from 'react-d3';
+// import { CandleStickChart  } from 'react-d3';
 import moment from 'moment';
 import {ma} from 'moving-averages';
 var sma = require('sma');
