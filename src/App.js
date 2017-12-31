@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import './App.css';
 // import { CandleStickChart  } from 'react-d3';
 import moment from 'moment';
-import {ma} from 'moving-averages';
+// import {ma} from 'moving-averages';
 var sma = require('sma');
 
 class App extends Component {
@@ -74,7 +74,7 @@ class App extends Component {
         newPoints.push({x: this.state.dates[i], y: this.state.closingPrices[i]});
       }
       this.setState({points: newPoints});
-      this.setState({smaPrices: ma(this.state.closingPrices, this.state.smaRange)});
+      this.setState({smaPrices: sma(this.state.closingPrices, this.state.smaRange)});
     })
     .then(() => {
       console.log("CLOSINGPRICES", this.state.closingPrices);
@@ -123,7 +123,7 @@ class App extends Component {
         </ol>
         {(this.state.smaPrices.length > 0) && <h3>SMA({this.state.smaRange}):</h3>}
         <ol start={this.state.smaRange}>
-          {this.state.smaPrices.map(sma => <li key={sma.toFixed(4)}>{sma.toFixed(4)}</li>)}
+          {this.state.smaPrices.map(sma => <li key={parseInt(sma).toFixed(4)}>{parseInt(sma).toFixed(4)}</li>)}
         </ol>
       </div>
     );
