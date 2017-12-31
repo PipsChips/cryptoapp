@@ -123,7 +123,7 @@ class App extends Component {
         </ol>
         {(this.state.smaPrices.length > 0) && <h3>SMA({this.state.smaRange}):</h3>}
         <ol start={this.state.smaRange}>
-          {this.state.smaPrices.map(sma => <li key={parseInt(sma).toFixed(4)}>{parseInt(sma).toFixed(4)}</li>)}
+          {this.state.smaPrices.map(sma => <li key={parseFloat(sma).toFixed(4)}>{parseFloat(sma).toFixed(4)}</li>)}
         </ol>
       </div>
     );
