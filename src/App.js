@@ -24,17 +24,10 @@ class App extends Component {
       smaRange: 2,
       smaPrices: [],
       dates: [],
-      points: [],
-      candlestickData: [],
-      smaLineData: [
-        ['DAY', 'val1'],
-        ['2017-12-17', 12500],
-        ['2017-12-19', 14500],
-        ['2017-12-21', 12500]
-      ]
+      chartData: []
     };
 
-    this.symbolChange = this.symbolChange.bind(this);
+    this.symbolChanged = this.symbolChanged.bind(this);
     this.calculate = this.calculate.bind(this);
     this.dateChanged = this.dateChanged.bind(this);
     this.smaRangeChanged = this.smaRangeChanged.bind(this);
@@ -58,9 +51,9 @@ class App extends Component {
     });
   }
 
-  symbolChange(e) {
+  symbolChanged(e) {
     this.setState({selectedSymbol: e.target.value});
-    console.log("symbol changed to " + e.target.value);
+    this.setState({chartData: []});    
   }
 
   calculate(e) {
@@ -80,93 +73,71 @@ class App extends Component {
         this.setState({openingPrices: json.Data.map(day => day.open)});
         this.setState({highPrices: json.Data.map(day => day.high)});
         this.setState({lowPrices: json.Data.map(day => day.low)});
-        
-        this.setState( {dates: json.Data.map(day => moment.unix(day.time).format("YYYY/MM/DD"))});
+        this.setState({dates: json.Data.map(day => moment.unix(day.time).format("YYYY/MM/DD"))});
       })
       .then(() => {
-        var newPoints = [];
-        for(var i = 0; i < this.state.closingPrices.length; i++) {
-          newPoints.push({x: this.state.dates[i], y: this.state.closingPrices[i]});
-        }
-        this.setState({points: newPoints});
-        this.setState({smaPrices: sma(this.state.closingPrices, this.state.smaRange, (n) => n.toFixed(2))});
+        this.setState({smaPrices: sma(this.state.closingPrices, this.state.smaRange).map(n => parseFloat(n))});
       })
       .then(() => {
-        
+        var dates = this.state.dates;
+        var lowPrices = this.state.lowPrices;
+        var highPrices = this.state.highPrices;
+        var openingPrices = this.state.openingPrices;
+        var closingPrices = this.state.closingPrices;
+        var SMAs = this.state.smaPrices;     
+        var smaRange = this.state.smaRange;   
 
-        var newData = [["DAY","val1","val2","val3","val4"]];
+        var newData = [['Date', 'Low', 'Open', 'Close', 'High', `SMA(${smaRange})`, 'Closing Price']];
         for (var i = 0; i < this.state.dates.length; i++) {
-          if(this.state.closingPrices[i] > this.state.openingPrices[i]) {
-            newData.push([this.state.dates[i], this.state.lowPrices[i], this.state.openingPrices[i], this.state.closingPrices[i], this.state.highPrices[i]]);
+          if(i < smaRange - 1) {
+            if(this.state.closingPrices[i] > this.state.openingPrices[i]) {
+              newData.push([dates[i], lowPrices[i], openingPrices[i], closingPrices[i], highPrices[i], null, closingPrices[i]]);
+            }
+            else {
+              newData.push([dates[i], highPrices[i], openingPrices[i], closingPrices[i], lowPrices[i], null, closingPrices[i]]);
+            }
           }
           else {
-            newData.push([this.state.dates[i], this.state.highPrices[i], this.state.openingPrices[i], this.state.closingPrices[i], this.state.lowPrices[i]]);
+            if(this.state.closingPrices[i] > this.state.openingPrices[i]) {
+              newData.push([dates[i], lowPrices[i], openingPrices[i], closingPrices[i], highPrices[i], SMAs[i - smaRange + 1], closingPrices[i]]);
+            }
+            else {
+              newData.push([dates[i], highPrices[i], openingPrices[i], closingPrices[i], lowPrices[i], SMAs[i - smaRange + 1], closingPrices[i]]);
+            }
           }
         }
-        this.setState({candlestickData: newData});
-      })
-      .then(() => {
-        console.log("CLOSING PRICES", this.state.closingPrices);
-        console.log("OPENING PRICES", this.state.openingPrices);
-        console.log("LOW PRICES", this.state.lowPrices);
-        console.log("HIGH PRICES", this.state.highPrices);
-        console.log("SMA PRICES", this.state.smaPrices);
-        console.log("DATES",this.state.dates);
-        console.log("POINTS: ", this.state.points);
-        console.log("CANDLESTICK DATA: ", this.state.candlestickData);
+        this.setState({chartData: newData});
       });
   }
 
   dateChanged(date, e) {
     date === 'startDate' ? 
-      this.setState({startDate: e.target.value}, () => console.log(this.state.startDate)) : 
-      this.setState({endDate: e.target.value}, () => console.log(this.state.endDate));
+      this.setState({startDate: e.target.value}) : 
+      this.setState({endDate: e.target.value});
 
-    this.setState({closingPrices: []});
-    this.setState({smaPrices: []});    
+    this.setState({chartData: []});
   }
 
   smaRangeChanged(e) {
     this.setState({smaRange: parseInt(e.target.value)});
-    this.setState({smaPrices: []});    
+    this.setState({chartData: []});    
   }
 
   render() {
-    var props1 = {
-      chartType:"CandlestickChart",
-      data: this.state.candlestickData,
-      width:"100%",
-      options:{
-        title:"Candlestick Chart",
-        legend:"none"
-      }
-    };
-
-    var props2 = {
-      chartType:"LineChart",
-      data: this.state.smaLineData,
-      width:"100%",
-      options:{
-        title:"Candlestick Chart",
-        legend:"none"
-      }
-    };
-
-    var comboProps = {
+    var props = {
       chartType:"ComboChart",
-      data: [
-        ['Date', 'Low', 'Open', 'Close', 'High', 'SMA'],
-        ['2014/05',   200,   324,    500,    456,     350],
-        ['2014/06',   322,   123,    543,    234,     320],
-        ['2014/07',   432,   455,    467,    568,     415],
-      ],
+      data: this.state.chartData,
       width:"100%",
+      height: 1000,
       options:{
-        title:"Combo Chart",
+        title:`Candlestick & SMA(${this.state.smaRange}) & Closing price Chart for: ${this.state.selectedSymbol} in EUR(\u20AC)`,
         seriesType: "candlesticks",
         series: {
           1: {
             type: "line"
+          },
+          2: {
+            type: 'line'
           }
         },
         legend:"none"
@@ -176,7 +147,7 @@ class App extends Component {
     return (
       <div className="App">
         <form onSubmit={this.calculate}>
-          <select value={this.state.selectedSymbol} onChange={this.symbolChange}>
+          <select value={this.state.selectedSymbol} onChange={this.symbolChanged}>
             {this.state.currencies && this.state.currencies.map(curr => 
                 <option value={curr} key={curr}>{curr}</option>) 
             }
@@ -191,16 +162,8 @@ class App extends Component {
           <br />
           <input type="submit" value="Calculate" />
         </form>
-        {(this.state.closingPrices.length > 0) && <h3>Closing Prices:</h3>}
-        <ol>
-          {this.state.closingPrices.map(price => <li key={price.toFixed(2)}>{price.toFixed(2)}</li>)}
-        </ol>
-        {(this.state.smaPrices.length > 0) && <h3>SMA({this.state.smaRange}):</h3>}
-        <ol start={this.state.smaRange}>
-          {this.state.smaPrices.map(sma => <li key={parseFloat(sma).toFixed(2)}>{parseFloat(sma).toFixed(2)}</li>)}
-        </ol>        
-        {/* {(this.state.candlestickData.length > 0) && <Chart  {...props2} {...props1}/>} */}
-        <Chart  {...comboProps} />
+
+        {(this.state.chartData.length > 0) && <Chart  {...props} />}
       </div>
     );
   }
