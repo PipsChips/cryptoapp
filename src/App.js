@@ -1,10 +1,8 @@
 import React, { Component } from 'react';
 import { Chart } from 'react-google-charts';
-import PropTypes from 'prop-types';
+//import PropTypes from 'prop-types';
 import './App.css';
-// import { CandleStickChart  } from 'react-d3';
 import moment from 'moment';
-// import {ma} from 'moving-averages';
 var sma = require('sma');
 
 class App extends Component {
@@ -56,6 +54,16 @@ class App extends Component {
     this.setState({chartData: []});
   }
 
+  dateChanged(date, e) {
+    date === 'startDate' ? this.setState({startDate: e.target.value}) : this.setState({endDate: e.target.value});
+    this.setState({chartData: []});
+  }
+
+  smaRangeChanged(e) {
+    this.setState({smaRange: parseInt(e.target.value)});
+    this.setState({chartData: []});
+  }
+
   calculate(e) {
     e.preventDefault();
 
@@ -78,7 +86,7 @@ class App extends Component {
       })
       .then(() => {
         this.setState({
-          smaPrices: sma(this.state.closingPrices, smaRange).map(n => parseFloat(n))
+          smaPrices: sma(this.state.closingPrices, smaRange, (n) => n.toFixed(4)).map(n => parseFloat(n))
         });
       })
       .then(() => {
@@ -89,8 +97,8 @@ class App extends Component {
         var closingPrices = this.state.closingPrices;
         var SMAs = this.state.smaPrices;
         var smaRange = this.state.smaRange;
+        var newData = [['Date', 'L(H)-H(L), Open-Close', 'Open', 'Close', 'High', `SMA(${smaRange})`, 'Closing Price']];
 
-        var newData = [['Date', 'Low', 'Open', 'Close', 'High', `SMA(${smaRange})`, 'Closing Price']];
         for (var i = 0; i < this.state.dates.length; i++) {
           if(i < smaRange - 1) {
             if(this.state.closingPrices[i] > this.state.openingPrices[i]) {
@@ -113,19 +121,6 @@ class App extends Component {
       });
   }
 
-  dateChanged(date, e) {
-    date === 'startDate' ?
-      this.setState({startDate: e.target.value}) :
-      this.setState({endDate: e.target.value});
-
-    this.setState({chartData: []});
-  }
-
-  smaRangeChanged(e) {
-    this.setState({smaRange: parseInt(e.target.value)});
-    this.setState({chartData: []});
-  }
-
   render() {
     var props = {
       chartType:"ComboChart",
@@ -136,12 +131,8 @@ class App extends Component {
         title:`Candlestick & SMA(${this.state.smaRange}) & Closing price Chart for: ${this.state.selectedSymbol} in EUR(\u20AC)`,
         seriesType: "candlesticks",
         series: {
-          1: {
-            type: "line"
-          },
-          2: {
-            type: 'line'
-          }
+          1: {type: "line"},
+          2: {type: 'line'}
         },
         legend:"none"
       }
@@ -165,15 +156,19 @@ class App extends Component {
             }
           </select>
           <label htmlFor="startDate"><b>Start Date: </b></label>
-          <input id="startDate" type="date" style={marginRight} onChange={this.dateChanged.bind(this, 'startDate')} />
+          <input id="startDate" type="date" max={moment(moment()).format("YYYY-MM-DD")} style={marginRight} onChange={this.dateChanged.bind(this, 'startDate')} />
           <label htmlFor="endDate"><b>End Date: </b></label>
-          <input id="endDate" type="date" style={marginRight} onChange={this.dateChanged.bind(this, 'endDate')} />
+          <input id="endDate" type="date" 
+            min={moment(this.state.startDate).add(1, 'days').format("YYYY-MM-DD")} 
+            max={moment(moment()).format("YYYY-MM-DD")}
+            style={marginRight} 
+            onChange={this.dateChanged.bind(this, 'endDate')} />
           <label htmlFor="smaRange">SMA(<b>Range</b>): </label>
           <input id="smaRange" type="number" value={this.state.smaRange} min="1" style={marginRight} onChange={this.smaRangeChanged} />
           <input type="submit" value="Calculate" />
         </form>
 
-        {(this.state.chartData.length > 0) && <Chart  {...props} />}
+        {(this.state.chartData.length > 0) && (this.state.endDate > this.state.startDate) && <Chart  {...props} />}
       </div>
     );
   }
