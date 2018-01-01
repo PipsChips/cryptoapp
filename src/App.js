@@ -44,7 +44,7 @@ class App extends Component {
         if (defaultWatchlistIds.includes(json.Data[currency].Id)) {
           defaultWatchlistNames.push(currency);
         }
-      } 
+      }
 
       this.setState({currencies: defaultWatchlistNames});
       this.setState({selectedSymbol: defaultWatchlistNames[0]});
@@ -53,13 +53,14 @@ class App extends Component {
 
   symbolChanged(e) {
     this.setState({selectedSymbol: e.target.value});
-    this.setState({chartData: []});    
+    this.setState({chartData: []});
   }
 
   calculate(e) {
     e.preventDefault();
 
     var symbol = this.state.selectedSymbol;
+    var smaRange = this.state.smaRange;
     var startDate = moment(this.state.startDate,'YYYY/MM/DD');
     var endDate = moment(this.state.endDate,'YYYY/MM/DD');
     var diffDays = endDate.diff(startDate, 'days');
@@ -76,7 +77,9 @@ class App extends Component {
         this.setState({dates: json.Data.map(day => moment.unix(day.time).format("YYYY/MM/DD"))});
       })
       .then(() => {
-        this.setState({smaPrices: sma(this.state.closingPrices, this.state.smaRange).map(n => parseFloat(n))});
+        this.setState({
+          smaPrices: sma(this.state.closingPrices, smaRange).map(n => parseFloat(n))
+        });
       })
       .then(() => {
         var dates = this.state.dates;
@@ -84,8 +87,8 @@ class App extends Component {
         var highPrices = this.state.highPrices;
         var openingPrices = this.state.openingPrices;
         var closingPrices = this.state.closingPrices;
-        var SMAs = this.state.smaPrices;     
-        var smaRange = this.state.smaRange;   
+        var SMAs = this.state.smaPrices;
+        var smaRange = this.state.smaRange;
 
         var newData = [['Date', 'Low', 'Open', 'Close', 'High', `SMA(${smaRange})`, 'Closing Price']];
         for (var i = 0; i < this.state.dates.length; i++) {
@@ -111,8 +114,8 @@ class App extends Component {
   }
 
   dateChanged(date, e) {
-    date === 'startDate' ? 
-      this.setState({startDate: e.target.value}) : 
+    date === 'startDate' ?
+      this.setState({startDate: e.target.value}) :
       this.setState({endDate: e.target.value});
 
     this.setState({chartData: []});
@@ -120,7 +123,7 @@ class App extends Component {
 
   smaRangeChanged(e) {
     this.setState({smaRange: parseInt(e.target.value)});
-    this.setState({chartData: []});    
+    this.setState({chartData: []});
   }
 
   render() {
@@ -144,22 +147,29 @@ class App extends Component {
       }
     };
 
+    var marginRight = {
+      marginRight: 2 + 'em'
+    };
+
+    var marginTop = {
+      marginTop: 1 + 'em'
+    };
+
     return (
       <div className="App">
-        <form onSubmit={this.calculate}>
-          <select value={this.state.selectedSymbol} onChange={this.symbolChanged}>
-            {this.state.currencies && this.state.currencies.map(curr => 
-                <option value={curr} key={curr}>{curr}</option>) 
+        <form onSubmit={this.calculate} style={marginTop}>
+          <label htmlFor="symbol"><b>Select Cryptocurrency: </b></label>
+          <select id="symbol" value={this.state.selectedSymbol} style={marginRight} onChange={this.symbolChanged}>
+            {this.state.currencies && this.state.currencies.map(curr =>
+                <option value={curr} key={curr}>{curr}</option>)
             }
           </select>
-          <br />
-          <input type="date" onChange={this.dateChanged.bind(this, 'startDate')} />
-          <br />
-          <input type="date" onChange={this.dateChanged.bind(this, 'endDate')} />
-          <br />
-          <label htmlFor="smaRange">SMA(<i>Range</i>)</label>
-          <input id="smaRange" type="number" value={this.state.smaRange} min="1" onChange={this.smaRangeChanged} />
-          <br />
+          <label htmlFor="startDate"><b>Start Date: </b></label>
+          <input id="startDate" type="date" style={marginRight} onChange={this.dateChanged.bind(this, 'startDate')} />
+          <label htmlFor="endDate"><b>End Date: </b></label>
+          <input id="endDate" type="date" style={marginRight} onChange={this.dateChanged.bind(this, 'endDate')} />
+          <label htmlFor="smaRange">SMA(<b>Range</b>): </label>
+          <input id="smaRange" type="number" value={this.state.smaRange} min="1" style={marginRight} onChange={this.smaRangeChanged} />
           <input type="submit" value="Calculate" />
         </form>
 
