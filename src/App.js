@@ -77,9 +77,9 @@ class App extends Component {
     var startDate = moment(this.state.startDate,'YYYY/MM/DD');
     var endDate = moment(this.state.endDate,'YYYY/MM/DD');
     var diffDays = endDate.diff(startDate, 'days');
-    var timestamp = parseInt(moment(endDate).format("X")) + 86400;
+    var timestamp = parseInt(moment(endDate.add(1, 'days')).format("X"));
     var endPointUrl = `https://min-api.cryptocompare.com/data/histoday?fsym=${selectedSymbol}&` +
-      `tsym=EUR&limit=${diffDays - 1}&aggregate=1&toTs=${timestamp}`;
+      `tsym=EUR&limit=${diffDays}&aggregate=1&toTs=${timestamp}`;
     console.log(endPointUrl);
 
     fetch(endPointUrl).then(res => res.json())
