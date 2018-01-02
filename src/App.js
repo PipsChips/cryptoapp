@@ -1,8 +1,8 @@
 import React, { Component } from 'react';
 import { Chart } from 'react-google-charts';
-//import PropTypes from 'prop-types';
 import './App.css';
 import moment from 'moment';
+import * as firebase from 'firebase';
 var sma = require('sma');
 
 class App extends Component {
@@ -49,6 +49,9 @@ class App extends Component {
         selectedSymbol: defaultWatchlistNames[0]
       });
     });
+
+    firebase.initializeApp({databaseURL: 'https://zadatak-sma.firebaseio.com'});
+    this.database = firebase.database();
   }
 
   symbolChanged(e) {
@@ -74,54 +77,63 @@ class App extends Component {
     e.preventDefault();
 
     var { selectedSymbol, smaRange, startDate, endDate } = this.state;
-    startDate = moment(startDate,'YYYY/MM/DD');
-    endDate = moment(endDate,'YYYY/MM/DD');
-    var diffDays = endDate.diff(startDate, 'days');
-    var timestamp = parseInt(moment(endDate.add(1, 'days')).format("X"));
-    var endPointUrl = `https://min-api.cryptocompare.com/data/histoday?fsym=${selectedSymbol}&` +
-      `tsym=EUR&limit=${diffDays}&aggregate=1&toTs=${timestamp}`;
-    console.log(endPointUrl);
-
-    fetch(endPointUrl).then(res => res.json())
-      .then(json => {
-        this.setState({
-          closingPrices: json.Data.map(day => day.close),
-          openingPrices: json.Data.map(day => day.open),
-          highPrices: json.Data.map(day => day.high),
-          lowPrices: json.Data.map(day => day.low),
-          dates: json.Data.map(day => moment.unix(day.time).format("YYYY/MM/DD"))
-        });
-      })
-      .then(() => {
-        this.setState({
-          smaPrices: sma(this.state.closingPrices, smaRange, (n) => n.toFixed(4)).map(n => parseFloat(n))
-        });
-      })
-      .then(() => {
-        var { dates, lowPrices: lp, highPrices: hp, openingPrices: op, closingPrices: cp, smaPrices: sp, smaRange: sr } = this.state;
-        var newData = [['Date', 'L(H)-H(L), Open-Close', 'Open', 'Close', 'High', `SMA(${sr})`, 'Closing Price']];
-
-        for (var i = 0; i < dates.length; i++) {
-          if(i < sr - 1) {
-            if(cp[i] > op[i]) {
-              newData.push([dates[i], lp[i], op[i], cp[i], hp[i], null, cp[i]]);
+    var sessionKey = selectedSymbol + " " + startDate + " " + endDate + " " + smaRange;
+    
+    if (sessionStorage.getItem(sessionKey)) {
+      this.setState({chartData: JSON.parse(sessionStorage.getItem(sessionKey))});
+    }
+    else {
+      startDate = moment(startDate, 'YYYY/MM/DD');
+      endDate = moment(endDate, 'YYYY/MM/DD');
+      var diffDays = endDate.diff(startDate, 'days');
+      var timestamp = parseInt(moment(endDate.add(1, 'days')).format("X"));
+      var endPointUrl = `https://min-api.cryptocompare.com/data/histoday?fsym=${selectedSymbol}&` +
+        `tsym=EUR&limit=${diffDays}&aggregate=1&toTs=${timestamp}`;
+      console.log(endPointUrl);
+  
+      fetch(endPointUrl).then(res => res.json())
+        .then(json => {
+          this.setState({
+            closingPrices: json.Data.map(day => day.close),
+            openingPrices: json.Data.map(day => day.open),
+            highPrices: json.Data.map(day => day.high),
+            lowPrices: json.Data.map(day => day.low),
+            dates: json.Data.map(day => moment.unix(day.time).format("YYYY/MM/DD"))
+          });
+        })
+        .then(() => {
+          this.setState({
+            smaPrices: sma(this.state.closingPrices, smaRange, (n) => n.toFixed(4)).map(n => parseFloat(n))
+          });
+        })
+        .then(() => {
+          var { dates, lowPrices: lp, highPrices: hp, openingPrices: op, closingPrices: cp, smaPrices: sp, } = this.state;
+          var newData = [['Date', 'L(H)-H(L), Open-Close', 'Open', 'Close', 'High', `SMA(${smaRange})`, 'Closing Price']];
+          
+          for (var i = 0; i < dates.length; i++) {
+            if (i < smaRange - 1) {
+              if (cp[i] > op[i]) {
+                newData.push([dates[i], lp[i], op[i], cp[i], hp[i], null, cp[i]]);
+              }
+              else {
+                newData.push([dates[i], hp[i], op[i], cp[i], lp[i], null, cp[i]]);
+              }
             }
             else {
-              newData.push([dates[i], hp[i], op[i], cp[i], lp[i], null, cp[i]]);
+              if (cp[i] > op[i]) {
+                newData.push([dates[i], lp[i], op[i], cp[i], hp[i], sp[i - smaRange + 1], cp[i]]);
+              }
+              else {
+                newData.push([dates[i], hp[i], op[i], cp[i], lp[i], sp[i - smaRange + 1], cp[i]]);
+              }
             }
           }
-          else {
-            if(cp[i] > op[i]) {
-              newData.push([dates[i], lp[i], op[i], cp[i], hp[i], sp[i - sr + 1], cp[i]]);
-            }
-            else {
-              newData.push([dates[i], hp[i], op[i], cp[i], lp[i], sp[i - sr + 1], cp[i]]);
-            }
-          }
-        }
-
-        this.setState({chartData: newData});
-      });
+  
+          this.setState({chartData: newData});
+          sessionStorage.setItem(sessionKey, JSON.stringify(newData));
+          this.database.ref('searchParams').push(sessionKey);  
+        });
+    }
   }
 
   render() {
