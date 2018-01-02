@@ -152,7 +152,7 @@ class App extends Component {
     return (
       <div className="App">      
         <form onSubmit={this.calculate} style={marginTop}>
-          <label htmlFor="symbol"><b>Select Cryptocurrency: </b></label>
+          <label htmlFor="symbol"><b>Cryptocurrency: </b></label>
           <select id="symbol" value={this.state.selectedSymbol} style={marginRight} onChange={this.symbolChanged}>
             {this.state.currencies && this.state.currencies.map(curr =>
                 <option value={curr} key={curr}>{curr}</option>)
@@ -176,7 +176,7 @@ class App extends Component {
           <input type="submit" value="Calculate" />
         </form>
 
-        {(this.state.chartData.length > 0) && (this.state.endDate > this.state.startDate) && <Chart  {...props} />}
+        {(this.state.chartData.length > 0) && <Chart  {...props} />}
       </div>
     );
   }
