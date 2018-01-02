@@ -10,7 +10,7 @@ class App extends Component {
     super();
 
     this.state = {
-      currencies: null,
+      currencies: [],
       timestamp: null,
       selectedSymbol: "",
       startDate: "",
@@ -44,14 +44,18 @@ class App extends Component {
         }
       }
 
-      this.setState({currencies: defaultWatchlistNames});
-      this.setState({selectedSymbol: defaultWatchlistNames[0]});
+      this.setState({
+        currencies: defaultWatchlistNames,
+        selectedSymbol: defaultWatchlistNames[0]
+      });
     });
   }
 
   symbolChanged(e) {
-    this.setState({selectedSymbol: e.target.value});
-    this.setState({chartData: []});
+    this.setState({
+      selectedSymbol: e.target.value,
+      chartData: []
+    });
   }
 
   dateChanged(date, e) {
@@ -60,29 +64,33 @@ class App extends Component {
   }
 
   smaRangeChanged(e) {
-    this.setState({smaRange: parseInt(e.target.value)});
-    this.setState({chartData: []});
+    this.setState({
+      smaRange: parseInt(e.target.value),
+      chartData: []
+    });
   }
 
   calculate(e) {
     e.preventDefault();
 
-    var symbol = this.state.selectedSymbol;
-    var smaRange = this.state.smaRange;
+    var { selectedSymbol, smaRange } = this.state;
     var startDate = moment(this.state.startDate,'YYYY/MM/DD');
     var endDate = moment(this.state.endDate,'YYYY/MM/DD');
     var diffDays = endDate.diff(startDate, 'days');
     var timestamp = parseInt(moment(endDate).format("X")) + 86400;
-    var endPointUrl = `https://min-api.cryptocompare.com/data/histoday?fsym=${symbol}&tsym=EUR&limit=${diffDays - 1}&aggregate=1&toTs=${timestamp}`;
+    var endPointUrl = `https://min-api.cryptocompare.com/data/histoday?fsym=${selectedSymbol}&` +
+      `tsym=EUR&limit=${diffDays - 1}&aggregate=1&toTs=${timestamp}`;
     console.log(endPointUrl);
 
     fetch(endPointUrl).then(res => res.json())
       .then(json => {
-        this.setState({closingPrices: json.Data.map(day => day.close)});
-        this.setState({openingPrices: json.Data.map(day => day.open)});
-        this.setState({highPrices: json.Data.map(day => day.high)});
-        this.setState({lowPrices: json.Data.map(day => day.low)});
-        this.setState({dates: json.Data.map(day => moment.unix(day.time).format("YYYY/MM/DD"))});
+        this.setState({
+          closingPrices: json.Data.map(day => day.close),
+          openingPrices: json.Data.map(day => day.open),
+          highPrices: json.Data.map(day => day.high),
+          lowPrices: json.Data.map(day => day.low),
+          dates: json.Data.map(day => moment.unix(day.time).format("YYYY/MM/DD"))
+        });
       })
       .then(() => {
         this.setState({
@@ -90,33 +98,28 @@ class App extends Component {
         });
       })
       .then(() => {
-        var dates = this.state.dates;
-        var lowPrices = this.state.lowPrices;
-        var highPrices = this.state.highPrices;
-        var openingPrices = this.state.openingPrices;
-        var closingPrices = this.state.closingPrices;
-        var SMAs = this.state.smaPrices;
-        var smaRange = this.state.smaRange;
+        var { dates, lowPrices: lp, highPrices: hp, openingPrices: op, closingPrices: cp, smaPrices: sp, smaRange: sr } = this.state;
         var newData = [['Date', 'L(H)-H(L), Open-Close', 'Open', 'Close', 'High', `SMA(${smaRange})`, 'Closing Price']];
 
-        for (var i = 0; i < this.state.dates.length; i++) {
-          if(i < smaRange - 1) {
-            if(this.state.closingPrices[i] > this.state.openingPrices[i]) {
-              newData.push([dates[i], lowPrices[i], openingPrices[i], closingPrices[i], highPrices[i], null, closingPrices[i]]);
+        for (var i = 0; i < dates.length; i++) {
+          if(i < sr - 1) {
+            if(cp[i] > op[i]) {
+              newData.push([dates[i], lp[i], op[i], cp[i], hp[i], null, cp[i]]);
             }
             else {
-              newData.push([dates[i], highPrices[i], openingPrices[i], closingPrices[i], lowPrices[i], null, closingPrices[i]]);
+              newData.push([dates[i], hp[i], op[i], cp[i], lp[i], null, cp[i]]);
             }
           }
           else {
-            if(this.state.closingPrices[i] > this.state.openingPrices[i]) {
-              newData.push([dates[i], lowPrices[i], openingPrices[i], closingPrices[i], highPrices[i], SMAs[i - smaRange + 1], closingPrices[i]]);
+            if(cp[i] > op[i]) {
+              newData.push([dates[i], lp[i], op[i], cp[i], hp[i], sp[i - sr + 1], cp[i]]);
             }
             else {
-              newData.push([dates[i], highPrices[i], openingPrices[i], closingPrices[i], lowPrices[i], SMAs[i - smaRange + 1], closingPrices[i]]);
+              newData.push([dates[i], hp[i], op[i], cp[i], lp[i], sp[i - sr + 1], cp[i]]);
             }
           }
         }
+
         this.setState({chartData: newData});
       });
   }
@@ -147,7 +150,7 @@ class App extends Component {
     };
 
     return (
-      <div className="App">
+      <div className="App">      
         <form onSubmit={this.calculate} style={marginTop}>
           <label htmlFor="symbol"><b>Select Cryptocurrency: </b></label>
           <select id="symbol" value={this.state.selectedSymbol} style={marginRight} onChange={this.symbolChanged}>
@@ -155,16 +158,20 @@ class App extends Component {
                 <option value={curr} key={curr}>{curr}</option>)
             }
           </select>
+
           <label htmlFor="startDate"><b>Start Date: </b></label>
-          <input id="startDate" type="date" max={moment(moment()).format("YYYY-MM-DD")} style={marginRight} onChange={this.dateChanged.bind(this, 'startDate')} />
+          <input id="startDate" type="date" max={moment(moment()).format("YYYY-MM-DD")} 
+            style={marginRight} onChange={this.dateChanged.bind(this, 'startDate')} />
+
           <label htmlFor="endDate"><b>End Date: </b></label>
           <input id="endDate" type="date" 
             min={moment(this.state.startDate).add(1, 'days').format("YYYY-MM-DD")} 
             max={moment(moment()).format("YYYY-MM-DD")}
-            style={marginRight} 
-            onChange={this.dateChanged.bind(this, 'endDate')} />
+            style={marginRight} onChange={this.dateChanged.bind(this, 'endDate')} />
+
           <label htmlFor="smaRange">SMA(<b>Range</b>): </label>
           <input id="smaRange" type="number" value={this.state.smaRange} min="1" style={marginRight} onChange={this.smaRangeChanged} />
+
           <input type="submit" value="Calculate" />
         </form>
 
