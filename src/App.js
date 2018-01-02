@@ -170,7 +170,8 @@ class App extends Component {
             style={marginRight} onChange={this.dateChanged.bind(this, 'endDate')} />
 
           <label htmlFor="smaRange">SMA(<b>Range</b>): </label>
-          <input id="smaRange" type="number" value={this.state.smaRange} min="1" style={marginRight} onChange={this.smaRangeChanged} />
+          <input id="smaRange" type="number" value={this.state.smaRange} min="1" 
+            style={marginRight} onChange={this.smaRangeChanged} />
 
           <input type="submit" value="Calculate" />
         </form>
