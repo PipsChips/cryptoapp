@@ -53,7 +53,7 @@ class App extends Component {
 
   symbolChanged(e) {
     this.setState({
-      selectedSymbol: e.target.value,
+      selectedSymbol: e.target.value, 
       chartData: []
     });
   }
@@ -65,7 +65,7 @@ class App extends Component {
 
   smaRangeChanged(e) {
     this.setState({
-      smaRange: parseInt(e.target.value),
+      smaRange: parseInt(e.target.value), 
       chartData: []
     });
   }
@@ -73,9 +73,9 @@ class App extends Component {
   calculate(e) {
     e.preventDefault();
 
-    var { selectedSymbol, smaRange } = this.state;
-    var startDate = moment(this.state.startDate,'YYYY/MM/DD');
-    var endDate = moment(this.state.endDate,'YYYY/MM/DD');
+    var { selectedSymbol, smaRange, startDate, endDate } = this.state;
+    startDate = moment(startDate,'YYYY/MM/DD');
+    endDate = moment(endDate,'YYYY/MM/DD');
     var diffDays = endDate.diff(startDate, 'days');
     var timestamp = parseInt(moment(endDate.add(1, 'days')).format("X"));
     var endPointUrl = `https://min-api.cryptocompare.com/data/histoday?fsym=${selectedSymbol}&` +
@@ -99,7 +99,7 @@ class App extends Component {
       })
       .then(() => {
         var { dates, lowPrices: lp, highPrices: hp, openingPrices: op, closingPrices: cp, smaPrices: sp, smaRange: sr } = this.state;
-        var newData = [['Date', 'L(H)-H(L), Open-Close', 'Open', 'Close', 'High', `SMA(${smaRange})`, 'Closing Price']];
+        var newData = [['Date', 'L(H)-H(L), Open-Close', 'Open', 'Close', 'High', `SMA(${sr})`, 'Closing Price']];
 
         for (var i = 0; i < dates.length; i++) {
           if(i < sr - 1) {
